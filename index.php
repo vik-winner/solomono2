@@ -2,30 +2,23 @@
 $start = microtime(true);
 
 $dsn = "mysql:host=mariadb;dbname=solomono";
-$db = new PDO($dsn, "solomono", "Solomono20!");
-$result = [];
+$option = [
+    PDO::ATTR_STRINGIFY_FETCHES => false,
+    PDO::ATTR_EMULATE_PREPARES => false,
+];
+$db = new PDO($dsn, "solomono", "Solomono20!" , $option);
 
-$query = $db->query("SELECT categories_id FROM categories");
-while ($row = $query->fetch()) {
-    $parent = $db->query("SELECT categories_id FROM categories WHERE parent_id={$row['categories_id']}");
-    if ($parents = $parent->fetchAll()) {
-        foreach ($parents as $parent) {
-            $result[$row['categories_id']][$parent['categories_id']] = $parent['categories_id'];
-        }
-    } else {
-        $result[$row['categories_id']] = $row['categories_id'];
-    }
-
-}
+$query = $db->query("SELECT categories_id, parent_id FROM categories");
+$result = $query->fetchAll();
+$tree = [];
 foreach ($result as $key => $value) {
-    if (is_array($value)) {
-        foreach ($value as $value1) {
-            $result1[$key][$value1] = $result[$value1];
-        }
-    } else {
-        $result1[$key] = $value;
+    $tree[$value['parent_id']][$value['categories_id']] = &$tree[$value['categories_id']];
+}
+foreach ($tree as $key => $value) {
+    if($tree[$key] === null) {
+        $tree[$key] = $key;
     }
 }
 
-var_dump($result1);
+var_dump($tree[0]);
 echo 'Время выполнения скрипта: '.round(microtime(true) - $start, 4).' сек.';
